@@ -81,11 +81,29 @@ async def handle_commands():
             respond({"type": "error", "message": f"unknown action: {action}"})
 
 
+def _is_apple_tv(device):
+    """Check if a device is an actual Apple TV (not a Mac, etc.)."""
+    info = str(device.device_info).lower() if device.device_info else ""
+    if "tv" in info or "tvos" in info:
+        return True
+    # Some older Apple TVs might not have clear device_info
+    # Filter out obvious non-Apple-TV devices
+    name_lower = device.name.lower()
+    if "macbook" in name_lower or "mac" in name_lower:
+        return False
+    if "iphone" in name_lower or "ipad" in name_lower or "homepod" in name_lower:
+        return False
+    return True
+
+
 async def do_scan(state, loop, storage):
     try:
-        devices = await scan(loop=loop, timeout=5, storage=storage)
+        all_devices = await scan(loop=loop, timeout=5, storage=storage)
         device_list = []
-        for d in devices:
+        for d in all_devices:
+            if not _is_apple_tv(d):
+                continue
+
             # Check pairing status for Companion service
             paired = False
             for svc in d.services:
@@ -132,11 +150,19 @@ async def do_connect(state, loop, storage, identifier):
 
     # Check if Companion pairing is needed
     needs_pairing = False
+    has_companion = False
     for svc in dev.services:
         if svc.protocol == const.Protocol.Companion:
-            if svc.pairing == const.PairingRequirement.Mandatory and not svc.credentials:
-                needs_pairing = True
+            has_companion = True
+            req = svc.pairing
+            if req in (const.PairingRequirement.Mandatory, const.PairingRequirement.Optional):
+                if not svc.credentials:
+                    needs_pairing = True
             break
+
+    if not has_companion:
+        respond({"type": "error", "message": "Device does not support remote control (no Companion service)"})
+        return
 
     if needs_pairing:
         respond({
@@ -193,6 +219,12 @@ async def do_submit_pin(state, loop, storage, pin):
         await state.pairing_handler.finish()
 
         if state.pairing_handler.has_paired:
+            # Ensure credentials are persisted to disk
+            try:
+                storage.save()
+            except Exception:
+                pass
+
             respond({"type": "pairing_success", "message": "Paired! Connecting..."})
 
             # Connect — credentials are in storage now
@@ -230,7 +262,18 @@ async def do_command(state, cmd):
         await method()
         respond({"type": "ok"})
     except Exception as e:
-        respond({"type": "error", "message": f"command '{cmd}' failed: {e}"})
+        msg = str(e)
+        if "not supported" in msg.lower():
+            # Likely missing credentials — need re-pairing
+            state.connected = False
+            respond({
+                "type": "pairing_required",
+                "name": state.config.name if state.config else "Unknown",
+                "identifier": state.config.identifier if state.config else "",
+                "message": "Device needs pairing. Old credentials may have expired. Click 'Pair' to re-pair.",
+            })
+        else:
+            respond({"type": "error", "message": f"command '{cmd}' failed: {e}"})
 
 
 async def do_hold_command(state, cmd, duration):
@@ -253,7 +296,17 @@ async def do_hold_command(state, cmd, duration):
         await method(action=InputAction.Hold)
         respond({"type": "ok"})
     except Exception as e:
-        respond({"type": "error", "message": f"hold command '{cmd}' failed: {e}"})
+        msg = str(e)
+        if "not supported" in msg.lower():
+            state.connected = False
+            respond({
+                "type": "pairing_required",
+                "name": state.config.name if state.config else "Unknown",
+                "identifier": state.config.identifier if state.config else "",
+                "message": "Device needs pairing. Old credentials may have expired. Click 'Pair' to re-pair.",
+            })
+        else:
+            respond({"type": "error", "message": f"hold command '{cmd}' failed: {e}"})
 
 
 async def do_disconnect(state):
