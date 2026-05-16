@@ -1,0 +1,6 @@
+.build/
+*.app/
+*.o
+*.d
+*.swiftdeps
+*.swiftdeps~
