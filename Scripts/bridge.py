@@ -8,7 +8,11 @@ import os
 import sys
 
 from pyatv import connect, const, pair, scan
+from pyatv.protocols.companion.api import InputAction
 from pyatv.storage.file_storage import FileStorage
+
+# Commands that support press-and-hold (InputAction.Hold)
+HOLDABLE_COMMANDS = {"up", "down", "left", "right", "select", "menu", "home"}
 
 CREDENTIALS_DIR = os.path.expanduser("~/.appletv_control")
 CREDENTIALS_FILE = os.path.join(CREDENTIALS_DIR, "credentials.json")
@@ -61,6 +65,9 @@ async def handle_commands():
 
         elif action == "command":
             await do_command(state, msg.get("command", ""))
+
+        elif action == "hold_command":
+            await do_hold_command(state, msg.get("command", ""), msg.get("duration", 1.0))
 
         elif action == "disconnect":
             await do_disconnect(state)
@@ -224,6 +231,29 @@ async def do_command(state, cmd):
         respond({"type": "ok"})
     except Exception as e:
         respond({"type": "error", "message": f"command '{cmd}' failed: {e}"})
+
+
+async def do_hold_command(state, cmd, duration):
+    """Send a press-and-hold command using InputAction.Hold."""
+    if not state.atv or not state.connected:
+        respond({"type": "error", "message": "not connected"})
+        return
+
+    if cmd not in HOLDABLE_COMMANDS:
+        # Fall back to regular command
+        await do_command(state, cmd)
+        return
+
+    try:
+        rc = state.atv.remote_control
+        method = getattr(rc, cmd, None)
+        if method is None:
+            respond({"type": "error", "message": f"unknown command: {cmd}"})
+            return
+        await method(action=InputAction.Hold)
+        respond({"type": "ok"})
+    except Exception as e:
+        respond({"type": "error", "message": f"hold command '{cmd}' failed: {e}"})
 
 
 async def do_disconnect(state):

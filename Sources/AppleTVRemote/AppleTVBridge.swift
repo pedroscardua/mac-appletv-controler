@@ -105,6 +105,10 @@ class AppleTVBridge: ObservableObject {
         send(json: #"{"action": "command", "command": "\#(command.rawValue)"}"#)
     }
 
+    func sendHoldCommand(_ command: RemoteCommand) {
+        send(json: #"{"action": "hold_command", "command": "\#(command.rawValue)"}"#)
+    }
+
     func disconnect() {
         send(json: #"{"action": "disconnect"}"#)
         connectedDeviceName = nil
