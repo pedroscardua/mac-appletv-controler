@@ -1,0 +1,27 @@
+{
+    "name": "Apple TV Remote",
+    "bundle_id": "com.pedro.appletvremote",
+    "sku": "ATVR001",
+    "primary_category": "Utilities",
+    "secondary_category": "Entertainment",
+    "primary_language": "en-US",
+    "copyright": "2026 Pedro Scardua",
+    "description": {
+        "en-US": "Control your Apple TV right from your Mac's menu bar. Apple TV Remote puts a full-featured Siri Remote on your desktop, always one click away.\n\nFeatures:\n• One-click access from the menu bar\n• Auto-discovers Apple TVs on your network\n• Full D-pad with press-and-hold support\n• Playback controls (Play/Pause, Next, Previous)\n• Volume control\n• Menu, Home, and Sleep buttons\n• Secure pairing with PIN code\n• Auto-connects when only one Apple TV is found"
+    },
+    "keywords": {
+        "en-US": ["apple tv", "remote", "control", "siri remote", "menu bar", "appletv"]
+    },
+    "privacy_url": "https://pedroscardua.github.io/appletv-remote/privacy",
+    "support_url": "https://github.com/pedroscardua/mac-appletv-controler",
+    "version": "1.0",
+    "rating": {
+        "violence": false,
+        "gambling": false,
+        "unrestricted_web": false,
+        "horror": false,
+        "mature": false,
+        "profanity": false,
+        "drugs": false
+    }
+}

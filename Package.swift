@@ -9,7 +9,10 @@ let package = Package(
     targets: [
         .executableTarget(
             name: "AppleTVRemote",
-            path: "Sources/AppleTVRemote"
+            path: "Sources/AppleTVRemote",
+            swiftSettings: [
+                .unsafeFlags(["-parse-as-library"], .when(platforms: [.macOS]))
+            ]
         )
     ]
 )
